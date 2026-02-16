@@ -1,62 +1,36 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Bus ZGZ</title>
-  <link rel="stylesheet" href="/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bus ZGZ</title>
+<link rel="stylesheet" href="/style.css">
 </head>
-
 <body>
-  <nav class="nav">
-    <a href="/bus" class="act">Bus</a>
-    <a href="/tram">Tranvía</a>
-  </nav>
-  <h1>🚌 Marquesina Bus</h1>
-  <form id="f">
-    <input type="number" id="poste" placeholder="Nº de poste (ej: 716)" inputmode="numeric" required>
-    <button type="submit">Ver tiempos</button>
-  </form>
-  <div id="r"></div>
-  <script>
-    var f = document.getElementById('f'),
-      r = document.getElementById('r'),
-      p = document.getElementById('poste');
+<nav class="nav">
+<a href="/bus" class="act">Bus</a>
+<a href="/tram">Tranvía</a>
+</nav>
+<h1>🚌 Bus</h1>
+<form id="f">
+<input type="number" id="poste" placeholder="Nº de poste (ej: 716)" inputmode="numeric" required>
+<button type="submit">Ver tiempos</button>
+</form>
+<div id="r"></div>
+<script>
+var f=document.getElementById('f'),
+    r=document.getElementById('r'),
+    p=document.getElementById('poste');
 
-    f.onsubmit = function (e) {
-      e.preventDefault();
-      var n = p.value.trim();
-      if (!n) return;
-      r.innerHTML = '<p>Cargando...</p>';
-      fetch('/api/bus?poste=' + n)
-        .then(function (x) { return x.json() })
-        .then(function (d) {
-          if (d.error) {
-            r.innerHTML = '<div class="card err">' + d.error + '</div>';
-            return;
-          }
-          var h = '<p><b>' + d.parada + '</b></p>';
-          if (!d.destinos || !d.destinos.length) {
-            h += '<div class="card">Sin datos en este momento</div>';
-          } else {
-            for (var i = 0; i < d.destinos.length; i++) {
-              var x = d.destinos[i];
-              h += '<div class="card">';
-              h += '<span class="linea">' + x.linea + '</span> ';
-              h += '<span class="destino">→ ' + x.destino + '</span><br>';
-              h += '<span class="tiempo">' + x.primero + '</span>';
-              if (x.segundo) h += ' <span class="destino">/ luego ' + x.segundo + '</span>';
-              h += '</div>';
-            }
-          }
-          r.innerHTML = h;
-        })
-        .catch(function () {
-          r.innerHTML = '<div class="card err">Error de conexión</div>';
-        });
-    };
-  </script>
+f.onsubmit=function(e){
+  e.preventDefault();
+  var n=p.value.trim();
+  if(!n)return;
+  fetch('/api/bus?poste='+n)
+    .then(function(x){return x.text()})
+    .then(function(html){r.innerHTML=html})
+    .catch(function(){r.innerHTML='<p class="err">Error de conexión</p>'});
+};
+</script>
 </body>
-
 </html>
