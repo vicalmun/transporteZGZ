@@ -4,7 +4,7 @@ Maneja todas las llamadas a la API del Ayuntamiento de Zaragoza
 """
 
 from fastapi import FastAPI, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import httpx
 import asyncio
 
@@ -36,6 +36,30 @@ async def fetch_with_retry(url: str, retries: int = MAX_RETRIES) -> dict | None:
                 continue
     return None
 
+
+# ============================================
+# PÁGINAS ESTÁTICAS
+# ============================================
+
+@app.get("/")
+@app.get("/bus")
+async def serve_bus():
+    return FileResponse("bus.html")
+
+
+@app.get("/tram")
+async def serve_tram():
+    return FileResponse("tram.html")
+
+
+@app.get("/style.css")
+async def serve_css():
+    return FileResponse("style.css", media_type="text/css")
+
+
+# ============================================
+# API ENDPOINTS
+# ============================================
 
 @app.get("/api/bus")
 async def get_bus(poste: str = Query(..., description="Número de poste")):
