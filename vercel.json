@@ -35,5 +35,8 @@
       "src": "/",
       "dest": "/public/bus.html"
     }
+  ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.py" }
   ]
 }
