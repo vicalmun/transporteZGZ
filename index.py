@@ -1,33 +1,28 @@
 """
 ZGZ Transport API - Backend para Vercel Functions
-Maneja todas las llamadas a la API del Ayuntamiento de Zaragoza
 """
 
 from fastapi import FastAPI, Query
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse
 import httpx
 import asyncio
 
 app = FastAPI()
 
-# Config
 API_BASE = "https://www.zaragoza.es/sede/servicio/urbanismo-infraestructuras"
 TIMEOUT = 10.0
 MAX_RETRIES = 3
 
 
 async def fetch_with_retry(url: str, retries: int = MAX_RETRIES) -> dict | None:
-    """Fetch con reintentos - la API del Ayto es inestable"""
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         for attempt in range(retries):
             try:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     data = resp.json()
-                    # La API a veces devuelve {"error": "..."} con status 200
                     if "error" not in data:
                         return data
-                # Esperar un poco antes de reintentar
                 if attempt < retries - 1:
                     await asyncio.sleep(0.5)
             except Exception:
@@ -43,11 +38,13 @@ async def fetch_with_retry(url: str, retries: int = MAX_RETRIES) -> dict | None:
 
 @app.get("/")
 @app.get("/bus")
+@app.get("/bus/")
 async def serve_bus():
     return FileResponse("bus.html")
 
 
 @app.get("/tram")
+@app.get("/tram/")
 async def serve_tram():
     return FileResponse("tram.html")
 
@@ -58,61 +55,46 @@ async def serve_css():
 
 
 # ============================================
-# API ENDPOINTS
+# API - DEVUELVE HTML DIRECTAMENTE
 # ============================================
 
-@app.get("/api/bus")
+@app.get("/api/bus", response_class=HTMLResponse)
 async def get_bus(poste: str = Query(..., description="Número de poste")):
-    """
-    Obtiene tiempos de llegada de buses para un poste dado.
-    Limpia y simplifica la respuesta para el cliente.
-    """
-    # Limpiar input (solo números)
     poste_num = ''.join(filter(str.isdigit, poste))
     if not poste_num:
-        return JSONResponse({"error": "Introduce un número de poste válido"}, status_code=400)
+        return "<p class='err'>Introduce un número de poste válido</p>"
     
     url = f"{API_BASE}/transporte-urbano/poste-autobus/tuzsa-{poste_num}.json"
     data = await fetch_with_retry(url)
     
     if not data:
-        return JSONResponse({
-            "error": "No se pudo obtener info. Comprueba el número o intenta de nuevo."
-        }, status_code=502)
+        return "<p class='err'>No se pudo obtener info. Comprueba el número o intenta de nuevo.</p>"
     
-    # Extraer y limpiar datos
-    destinos = []
-    for d in data.get("destinos", []):
-        destinos.append({
-            "linea": d.get("linea", "?"),
-            "destino": d.get("destino", ""),
-            "primero": d.get("primero", "?"),
-            "segundo": d.get("segundo")
-        })
-    
-    # Extraer nombre de parada del title: "(716) P. Fernando El Católico N.º 70 Líneas: Ci1, 42"
+    # Extraer nombre de parada
     title = data.get("title", "")
     parada = title.split(" Líneas:")[0] if " Líneas:" in title else title
     
-    return {
-        "parada": parada,
-        "destinos": destinos
-    }
+    destinos = data.get("destinos", [])
+    if not destinos:
+        return f"<p><b>{parada}</b></p><p>Sin datos en este momento</p>"
+    
+    html = f"<p><b>{parada}</b></p><ul>"
+    for d in destinos:
+        linea = d.get("linea", "?")
+        primero = d.get("primero", "?")
+        html += f"<li><b>{linea}</b> - {primero}</li>"
+    html += "</ul>"
+    
+    return html
 
 
-@app.get("/api/tranvia/paradas")
+@app.get("/api/tranvia/paradas", response_class=HTMLResponse)
 async def get_tranvia_paradas():
-    """
-    Obtiene lista de paradas de tranvía (solo id y nombre).
-    Se cachea en el cliente porque cambia muy poco.
-    """
     url = f"{API_BASE}/transporte-urbano/parada-tranvia.json?rows=100"
     data = await fetch_with_retry(url)
     
     if not data or "result" not in data:
-        return JSONResponse({
-            "error": "No se pudo obtener lista de paradas"
-        }, status_code=502)
+        return "<option value=''>Error cargando paradas</option>"
     
     paradas = []
     for p in data.get("result", []):
@@ -121,37 +103,35 @@ async def get_tranvia_paradas():
             "nombre": p.get("title", "")
         })
     
-    # Ordenar por nombre
     paradas.sort(key=lambda x: x["nombre"])
     
-    return paradas
+    html = "<option value=''>-- Elige parada --</option>"
+    for p in paradas:
+        html += f"<option value='{p['id']}'>{p['nombre']}</option>"
+    
+    return html
 
 
-@app.get("/api/tranvia/tiempos")
+@app.get("/api/tranvia/tiempos", response_class=HTMLResponse)
 async def get_tranvia_tiempos(id: str = Query(..., description="ID de parada")):
-    """
-    Obtiene tiempos de llegada para una parada de tranvía específica.
-    """
     if not id:
-        return JSONResponse({"error": "Falta ID de parada"}, status_code=400)
+        return "<p class='err'>Falta ID de parada</p>"
     
     url = f"{API_BASE}/transporte-urbano/parada-tranvia/{id}.json"
     data = await fetch_with_retry(url)
     
     if not data:
-        return JSONResponse({
-            "error": "No se pudo obtener tiempos. Intenta de nuevo."
-        }, status_code=502)
+        return "<p class='err'>No se pudo obtener tiempos. Intenta de nuevo.</p>"
     
-    destinos = []
-    for d in data.get("destinos", []):
-        destinos.append({
-            "linea": d.get("linea", "L1"),
-            "destino": d.get("destino", ""),
-            "minutos": d.get("minutos", "?")
-        })
+    destinos = data.get("destinos", [])
+    if not destinos:
+        return "<p>Sin tranvías en este momento</p>"
     
-    return {
-        "parada": data.get("title", ""),
-        "destinos": destinos
-    }
+    html = "<ul>"
+    for d in destinos:
+        linea = d.get("linea", "L1")
+        minutos = d.get("minutos", "?")
+        html += f"<li><b>{linea}</b> - {minutos} min</li>"
+    html += "</ul>"
+    
+    return html
