@@ -1,0 +1,15 @@
+/* ZGZ Transport - Mini CSS para KaiOS */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;font-size:16px;line-height:1.4;padding:8px;background:#f5f5f5;color:#222}
+h1{font-size:18px;margin-bottom:12px;color:#c41e3a}
+input,select,button{width:100%;padding:10px;font-size:16px;border:2px solid #999;border-radius:4px;margin-bottom:8px;background:#fff}
+input:focus,select:focus{border-color:#c41e3a;outline:none}
+button{background:#c41e3a;color:#fff;border:none;font-weight:bold}
+.card{background:#fff;padding:10px;margin-bottom:8px;border-radius:4px;border-left:4px solid #c41e3a}
+.linea{font-weight:bold;color:#c41e3a;font-size:18px}
+.destino{color:#555;font-size:14px}
+.tiempo{font-size:22px;font-weight:bold}
+.err{background:#fee;border-left-color:#c00;color:#900;padding:10px}
+.nav{display:flex;gap:8px;margin-bottom:12px}
+.nav a{flex:1;text-align:center;padding:8px;background:#fff;border-radius:4px;color:#c41e3a;text-decoration:none;border:2px solid #c41e3a}
+.nav a.act{background:#c41e3a;color:#fff}

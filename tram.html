@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tranvía ZGZ</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+  <nav class="nav">
+    <a href="/bus">Bus</a>
+    <a href="/tram" class="act">Tranvía</a>
+  </nav>
+  <h1>🚊 Tranvía</h1>
+  <select id="parada">
+    <option value="">-- Elige parada --</option>
+  </select>
+  <div id="r"></div>
+  <script>
+    var sel = document.getElementById('parada'),
+      r = document.getElementById('r');
+
+    // Cargar lista de paradas al inicio
+    fetch('/api/tranvia/paradas')
+      .then(function (x) { return x.json() })
+      .then(function (d) {
+        if (d.error) {
+          r.innerHTML = '<div class="card err">' + d.error + '</div>';
+          return;
+        }
+        for (var i = 0; i < d.length; i++) {
+          var o = document.createElement('option');
+          o.value = d[i].id;
+          o.text = d[i].nombre;
+          sel.add(o);
+        }
+      })
+      .catch(function () {
+        r.innerHTML = '<div class="card err">Error cargando paradas</div>';
+      });
+
+    sel.onchange = function () {
+      var id = sel.value;
+      if (!id) { r.innerHTML = ''; return; }
+      r.innerHTML = '<p>Cargando...</p>';
+      fetch('/api/tranvia/tiempos?id=' + id)
+        .then(function (x) { return x.json() })
+        .then(function (d) {
+          if (d.error) {
+            r.innerHTML = '<div class="card err">' + d.error + '</div>';
+            return;
+          }
+          var h = '';
+          if (!d.destinos || !d.destinos.length) {
+            h = '<div class="card">Sin tranvías en este momento</div>';
+          } else {
+            for (var i = 0; i < d.destinos.length; i++) {
+              var x = d.destinos[i];
+              h += '<div class="card">';
+              h += '<span class="linea">' + x.linea + '</span> ';
+              h += '<span class="destino">→ ' + x.destino + '</span><br>';
+              h += '<span class="tiempo">' + x.minutos + ' min</span>';
+              h += '</div>';
+            }
+          }
+          r.innerHTML = h;
+        })
+        .catch(function () {
+          r.innerHTML = '<div class="card err">Error de conexión</div>';
+        });
+    };
+  </script>
+</body>
+
+</html>
